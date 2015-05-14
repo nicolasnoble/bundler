@@ -8,7 +8,7 @@ module Bundler
     class Git < Path
       autoload :GitProxy, 'bundler/source/git/git_proxy'
 
-      attr_reader :uri, :ref, :branch, :options, :submodules
+      attr_reader :uri, :ref, :branch, :options, :submodules, :subpath
 
       def initialize(options)
         @options = options
@@ -24,6 +24,7 @@ module Bundler
         @branch     = options["branch"]
         @ref        = options["ref"] || options["branch"] || options["tag"] || 'master'
         @submodules = options["submodules"]
+        @subpath    = options["subpath"] || ''
         @name       = options["name"]
         @version    = options["version"]
 
@@ -39,7 +40,7 @@ module Bundler
         out = "GIT\n"
         out << "  remote: #{@uri}\n"
         out << "  revision: #{revision}\n"
-        %w(ref branch tag submodules).each do |opt|
+        %w(ref branch tag submodules subpath).each do |opt|
           out << "  #{opt}: #{options[opt]}\n" if options[opt]
         end
         out << "  glob: #{@glob}\n" unless @glob == DEFAULT_GLOB
@@ -47,7 +48,7 @@ module Bundler
       end
 
       def hash
-        [self.class, uri, ref, branch, name, version, submodules].hash
+        [self.class, uri, ref, branch, name, version, submodules, subpath].hash
       end
 
       def eql?(o)
@@ -57,6 +58,7 @@ module Bundler
         branch == o.branch   &&
         name == o.name       &&
         version == o.version &&
+        subpath == o.subpath &&
         submodules == o.submodules
       end
 
@@ -93,7 +95,13 @@ module Bundler
         end
       end
 
-      alias :path :install_path
+      # This is the path that contains the gemspec from the
+      # checkout of the git repository.
+      def gemspec_path
+        install_path.join(@subpath)
+      end
+
+      alias :path :gemspec_path
 
       def extension_dir_name
         "#{base_name}-#{shortref_for_path(revision)}"
